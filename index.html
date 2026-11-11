@@ -35,7 +35,9 @@ body{margin:0;background:var(--night);color:var(--ink);font-family:var(--ui);fon
 .bar i s{display:block;height:100%;width:50%;background:var(--c)}
 .bar.low{color:var(--bad)}
 .stage{grid-area:stage;position:relative;aspect-ratio:200/130;width:min(100%,calc(38dvh*200/130));max-width:100%;margin-inline:auto;border:2px solid var(--line);background:var(--panel);overflow:hidden}
-canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:manipulation;cursor:pointer}
+canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:manipulation;cursor:default}
+.tip{position:absolute;left:0;right:0;bottom:0;padding:4px 8px;font-size:13px;text-align:center;color:var(--v-hat);background:var(--night);opacity:.92;pointer-events:none}
+.tip:empty{display:none}
 .fl{position:absolute;transform:translate(-50%,-100%);font-weight:600;font-size:14px;color:var(--v-hat);text-shadow:1px 1px 0 var(--night);pointer-events:none;animation:up 1.1s ease-out forwards;white-space:nowrap}
 .fl.bad{color:var(--bad)} .fl.good{color:var(--ok)}
 @keyframes up{to{transform:translate(-50%,-260%);opacity:0}}
@@ -94,7 +96,7 @@ button.on small{color:var(--v-hat)}
       <div class="bar" id="bs" style="--c:var(--v-mem)">Настроение<i><s></s></i></div>
     </div>
   </header>
-  <div class="stage" id="stage"><canvas id="cv" aria-label="Улица, фонарь, человек на асфальте"></canvas></div>
+  <div class="stage" id="stage"><canvas id="cv" aria-label="Улица, фонарь, человек на асфальте"></canvas><div class="tip" id="tip"></div></div>
   <section class="log" id="log" aria-live="polite"></section>
   <div class="acts">
     <div class="row">
@@ -125,7 +127,7 @@ button.on small{color:var(--v-hat)}
       <li>Деньги тратятся в ларьке. С полуночи до четырёх он закрыт.</li>
       <li>Пёс: покорми хлебом — ляжет рядом, согреет и поднимет настроение.</li>
       <li>Настроение: отвечай голосам в колонке текста. Кто не унывает, держится даже голодным.</li>
-      <li>На сцене можно нажимать: на голубей — прогнать, пока не украли хлеб; на вора — спугнуть; на значок над головой — помочь.</li>
+      <li>На самой картинке нажимать нужно только туда, где прыгает стрелка: голуби, вор, пёс, шапка с деньгами, значок над головой. Внизу картинки в этот момент написано, что делать.</li>
     </ul>
     <div class="st" id="vStat"></div>
     <button id="vGo">Лечь на асфальт</button>
@@ -298,6 +300,16 @@ $('#sCard').onclick=buy(50,()=>{S.card=true;say('asph','Картон. Спаси
 $('#sSign').onclick=buy(70,()=>{S.sign=true;say('pride','«Наладчик лифтов. 31 год стажа». Ты написал резюме. На картонке.')},'sign');
 $('#sBlank').onclick=buy(120,()=>{S.blanket=true;say('cold','Одеяло. В клетку. Ну-ну. Я подожду.')},'blanket');
 cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();tap((e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H)});
+function targets(){const a=[];if(!live||paused)return a;
+  const th=peds.find(p=>p.type==='thief'&&!p.spotted&&S.hatOut&&S.hatMoney>0&&Math.abs(p.x-HX)<75&&(HX-p.x)*p.dir>0);
+  if(th)a.push({x:th.x+3,y:th.y-42,c:'#ff5a64',tip:'Вор в капюшоне идёт к шапке. Нажми на него.'});
+  const g=S.pigeons.filter(p=>p.state==='ground');if(g.length&&S.bread>0)a.push({x:g[0].x+2,y:g[0].y-6,c:'#ffd75e',tip:'Голуби подбираются к хлебу. Нажми на них, чтобы прогнать.'});
+  if(S.need)a.push({x:64.5,y:35,c:'#ffd75e',tip:S.need.k==='h'?'У него затекло тело. Нажми на него самого.':'На него накатило. Нажми на него самого.'});
+  if(S.dog&&S.dog.state==='sit'&&S.bread>0)a.push({x:S.dog.x+20,y:S.dog.y-16,c:'#ffd75e',tip:'Пёс ждёт. Нажми на него, чтобы покормить.'});
+  if(S.hatOut&&S.hatMoney>=40)a.push({x:HX,y:HY-6,c:'#ffd75e',tip:'В шапке '+S.hatMoney+' ₽. Нажми на шапку, чтобы забрать.'});
+  return a}
+cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
+  cv.style.cursor=targets().some(t=>Math.abs(t.x-x)<14&&y>t.y-6&&y<t.y+46)?'pointer':'default'});
 function tap(x,y){if(!live||paused)return;
   for(const p of peds)if(p.type==='thief'&&!p.spotted&&Math.abs(p.x+3-x)<10&&y>p.y-38&&y<p.y+5){p.spotted=true;S.wave=.4;say('sys','Ты смотришь ему прямо в капюшон. Он делает вид, что шёл мимо.');return}
   const g=S.pigeons.filter(p=>p.state==='ground');
@@ -503,6 +515,10 @@ function draw(){
     if(S.need.k==='h'){R(ctx,56,60,1,5,'#d0303a');R(ctx,56,66,1,1,'#d0303a')}else for(let i=0;i<3;i++)R(ctx,53+i*3,64,1,1,'#7a4fc0');ctx.translate(-8,23)}
   for(const q of parts){if(q.k==='c'){R(ctx,q.x,q.y,2,2,'#ffd75e')}else{R(ctx,q.x,q.y,1,1,'#ff7a9a');R(ctx,q.x+2,q.y,1,1,'#ff7a9a');R(ctx,q.x,q.y+1,3,1,'#ff7a9a');R(ctx,q.x+1,q.y+2,1,1,'#ff7a9a')}}
 }
+function marks(){const tg=targets();
+  for(const t of tg){const by=t.y-3-Math.abs(Math.sin(anim*5))*3;ctx.fillStyle='#1a1420';ctx.fillRect(t.x-3.5,by-5.5,7,3.5);ctx.fillRect(t.x-2.5,by-2,5,2);ctx.fillRect(t.x-1.5,by,3,1.5);
+    ctx.fillStyle=t.c;ctx.fillRect(t.x-2.5,by-4.5,5,2.5);ctx.fillRect(t.x-1.5,by-2,3,1.5);ctx.fillRect(t.x-.5,by-.5,1,1)}
+  set('#tip',tg.length?tg[0].tip:'')}
 /* ---------- HUD ---------- */
 const cache={};function set(id,v){if(cache[id]!==v){cache[id]=v;$(id).textContent=v}}
 function setBtn(id,html,dis,on){const k=html+'|'+dis+'|'+on;if(cache[id]!==k){cache[id]=k;const b=$(id);b.innerHTML=html;b.disabled=dis;b.classList.toggle('on',!!on)}}
@@ -525,7 +541,7 @@ function hud(){set('#clock',clockStr());set('#pocket',S.pocket);set('#hatm',S.ha
   const sb=(id,n,p,ds,own)=>setBtn(id,n+' '+(own?'есть':p+' ₽')+'<small>'+ds+'</small>',off||!so||own||S.pocket<p);
   sb('#sBread','Хлеб',25,'еда себе или псу');sb('#sTea','Чай',35,'+32 тепла');sb('#sPill','Аспирин',40,'лечит кашель');sb('#sCard','Картон',50,'мёрзнешь меньше',S.card);sb('#sSign','Табличка',70,'подают чаще',S.sign);sb('#sBlank','Одеяло',120,'мёрзнешь намного меньше',S.blanket);
   set('#shopnote',so?(hour()>=19?'Ларёк работает до полуночи':'Ларёк открыт'):'Ларёк закрыт до 04:00')}
-function frame(now){const dt=Math.min(.05,(now-last)/1000||0);last=now;if(!paused){anim+=dt;step(dt)}draw();hud();requestAnimationFrame(frame)}
+function frame(now){const dt=Math.min(.05,(now-last)/1000||0);last=now;if(!paused){anim+=dt;step(dt)}draw();marks();hud();requestAnimationFrame(frame)}
 reset();S.time=0;requestAnimationFrame(frame);
 })();
 </script>
