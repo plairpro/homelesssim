@@ -1,0 +1,2 @@
+start	click:text=Лечь_на_асфальт
+play	click:text=Выставить_шапку wait:3 click:text=Забрать_шапку wait:2

@@ -1,0 +1,31 @@
+browser	/usr/bin/google-chrome
+time	2026-11-12 09:56:31
+render	cheap
+hookless	no window.game: the game is stepped through its own loop
+ua	HeadlessChrome/153.0.0.0
+scene	0	hookless
+state	0	hookless	{}
+state	60	hookless	{}
+pressure	none	the game set no number state.margin in play
+steptime	60	0.747	8.100
+frametime	none	no frame was drawn in play
+done	60	hookless	stop	1.0	126
+measured	1280x577
+text	hookless	html	148,12,226,42	18.7	11.73	inside	19:00
+text	hookless	html	148,40,184,54	20.6	5.49	inside	Лежит
+text	hookless	html	480,27,539,43	20.6	12.51	inside	Карман
+text	hookless	html	539,27,547,43	20.6	12.39	inside	0
+text	hookless	html	576,27,626,43	20.6	12.51	inside	Шапка
+text	hookless	html	626,27,635,43	20.6	12.39	inside	0
+text	hookless	html	664,26,706,42	20.6	12.51	inside	Хлеб
+text	hookless	html	706,26,714,42	20.6	12.39	inside	2
+text	hookless	html	736,25,808,39	20.6	11.44	inside	Как играть
+text	hookless	html	96,58,132,72	20.6	5.49	inside	Тепло
+text	hookless	html	125,455,243,470	22.5	2.89	inside	Выставить шапку
+text	hookless	html	111,473,257,485	20.6	5.02	inside	прохожие кидают мелочь
+text	hookless	html	442,175,730,209	50.5	10.73	inside	Ондатровая шапка
+text	hookless	html	442,223,835,329	26.2	11.44	inside	Ноябрь. Николай Петрович Сомов, 58 лет, бывший наладчик лифт
+text	hookless	html	568,368,712,386	28.1	11.44	inside	Лечь на асфальт
+screen	60	hookless	2d3147ef	drawn
+uncaught	0
+shot	-	0
