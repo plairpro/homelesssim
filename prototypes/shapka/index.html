@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="https://plair.pro/sdk.js"></script>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Ондатровая шапка</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -80,6 +81,7 @@ button.on small{color:var(--lamp)}
 .card ul{margin:0;padding-left:20px;font-size:14px;line-height:20px;color:var(--dim);display:grid;gap:8px}
 .card .st{font-size:12px;line-height:16px;color:var(--muted)}
 .card .st:empty{display:none}
+.card .chal{font-size:14px;line-height:20px;color:var(--lamp)}
 .card button{font-size:15px;background:var(--ink);color:var(--night);box-shadow:none}
 .card button:hover:not(:disabled){background:#fff}
 @media (min-width:820px){
@@ -135,6 +137,7 @@ button.on small{color:var(--lamp)}
     <h1 id="vTitle">Ондатровая шапка</h1>
     <p id="vText">Ноябрь. Николай Петрович Сомов, 58 лет, бывший наладчик лифтов, лежит под фонарём у хлебного ларька. До рассвета двенадцать часов. Это пять минут твоей жизни.</p>
     <ul id="vHints">
+      <li>Очки: 10 за каждую прожитую секунду, 1000 за рассвет плюс остаток настроения и здоровья, 50 за каждый раз, когда поделился, 10 за ответ голосу.</li>
       <li>Цель — дожить до 07:00. Здоровье падает от холода, голода и болезни. На нуле ночь кончается.</li>
       <li>Шапка: пока она выставлена, прохожие кидают в неё мелочь. Деньги лежат в шапке, пока не заберёшь. Патруль (синий свет) и вор в капюшоне уносят то, что в ней осталось.</li>
       <li>Деньги тратятся в ларьке. С полуночи до четырёх он закрыт.</li>
@@ -142,6 +145,7 @@ button.on small{color:var(--lamp)}
       <li>Настроение: отвечай голосам в колонке текста. Кто не унывает, держится даже голодным.</li>
       <li>На самой картинке нажимать нужно только туда, где прыгает стрелка: голуби, вор, пёс, шапка с деньгами, значок над головой. Внизу картинки в этот момент написано, что делать.</li>
     </ul>
+    <div class="chal" id="vChal" hidden></div>
     <div class="st" id="vStat"></div>
     <button id="vGo">Лечь на асфальт</button>
   </div>
@@ -487,9 +491,13 @@ function end(k){live=false;if(rainG)rainG.gain.value=0;S.dead=k==='cold'||k==='i
   let rec={n:0,w:0};try{rec=JSON.parse(localStorage.getItem('shapka')||'')||rec}catch(e){}
   rec.n++;if(win)rec.w++;try{localStorage.setItem('shapka',JSON.stringify(rec))}catch(e){}
   $('#vTitle').textContent=ENDS[k][0];$('#vText').textContent=ENDS[k][1]();$('#vHints').hidden=true;
-  $('#vStat').textContent=(win?'Дожил до рассвета.':'Дожил до '+clockStr()+'.')+' Собрано '+S.total+' ₽. Поделился '+S.shared+' раз. Ответил голосам '+S.replied+' раз. Ночей: '+rec.n+', из них до утра: '+rec.w+'.';
+  const pts=Math.round(S.time)*10+(win?1000+Math.round(S.spirit)*10+Math.round(S.health)*5:0)+S.shared*50+S.replied*10;
+  try{window.PLAIR&&PLAIR.score(pts)}catch(e){}
+  if(chal&&isFinite(chal.score)){$('#vChal').textContent=pts>chal.score?'Вызов побит: '+pts+' против '+chal.score:'До вызова не хватило '+(chal.score-pts+1)+' очков';$('#vChal').hidden=false}
+  $('#vStat').textContent='Очки: '+pts+'. '+(win?'Дожил до рассвета.':'Дожил до '+clockStr()+'.')+' Собрано '+S.total+' ₽. Поделился '+S.shared+' раз. Ответил голосам '+S.replied+' раз. Ночей: '+rec.n+', из них до утра: '+rec.w+'.';
   $('#vGo').textContent='Ещё одна ночь';$('#veil').hidden=false}
-let helpMode=false;
+let helpMode=false,chal=null;
+try{window.PLAIR&&PLAIR.onChallenge(c=>{chal=c;if(!live&&isFinite(c.score)){$('#vChal').textContent='Вызов'+(c.name?' от '+String(c.name).slice(0,40):'')+': набери больше '+c.score+' очков';$('#vChal').hidden=false}})}catch(e){}
 document.addEventListener('click',e=>{if(e.target.closest('button')){audio();SND.click()}},true);
 $('#bSnd').onclick=()=>{sndOn=!sndOn;audio();if(MG)MG.gain.value=sndOn?.6:0;$('#bSnd').textContent=sndOn?'Звук вкл':'Звук выкл'};
 $('#bHelp').onclick=()=>{if(!live||paused)return;helpMode=true;paused=true;$('#vTitle').textContent='Как играть';$('#vText').textContent='';$('#vHints').hidden=false;$('#vStat').textContent='';$('#vGo').textContent='Продолжить';$('#veil').hidden=false};
