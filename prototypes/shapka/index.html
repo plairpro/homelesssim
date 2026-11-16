@@ -84,7 +84,7 @@ button.on small{color:var(--lamp)}
 .card button:hover:not(:disabled){background:#fff}
 @media (min-width:820px){
   .app{grid-template-columns:minmax(0,1fr) 380px;grid-template-rows:auto auto minmax(0,1fr);grid-template-areas:"hud log" "stage log" "acts log";gap:12px 24px;padding-block:16px}
-  .stage{width:min(100%,max(320px,calc((100dvh - 344px)*200/130)));margin-inline:0}
+  .stage{width:min(100%,max(320px,calc((100dvh - 360px)*200/130)));margin-inline:0}
   .acts{align-content:start}
   .row{grid-template-columns:repeat(4,minmax(0,1fr))}
   .row.shop{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -242,11 +242,18 @@ function fl(x,y,t,c){if(c==='bad')SND.bad();else if(c==='good')SND.good();else i
 let S,live=false,paused=false,anim=0,last=0;
 const peds=[],flakes=[],parts=[],drops=[];let car=null,carT=6;
 const wins=[{x:16,y:8,off:rnd(60,140),tv:false},{x:56,y:8,off:rnd(150,260),tv:true}];
+/* Баланс. T — первая, обучающая ночь; N — все следующие. Всё, что определяет сложность, лежит здесь. */
+const BAL={
+  T:{cold0:.26,cold1:.40,food:.22,mood:.07,sickAfter:18,sickWarm:35,give:.2,thiefMax:1,thiefP:.14,bread:2,food0:70,warm0:100,pig:[14,26]},
+  N:{cold0:.48,cold1:.92,food:.34,mood:.10,sickAfter:12,sickWarm:40,give:.12,thiefMax:4,thiefP:.22,bread:1,food0:60,warm0:90,pig:[10,18]},
+  rubWarm:5,rubFood:4,rubCd:7,price:{bread:30,tea:50,pill:40,card:50,sign:70,blanket:120},teaWarm:30,
+  hpSick:.45,hpCold:.6,hpFrozen:3,hpHungry:.35,hpStarve:1.2,hpStarveBrave:.25,hpRegen:.15,nightStep:.07,nightCap:1.35};
+let B=BAL.T,nightNo=1,nightK=1;
 const ALL={rub:1,shop:1,food:1,health:1,mood:1,dog:1,pig:1,need:1,cop:1,thief:1,card:1,sign:1,blanket:1,pill:1,extra:1};
 function isTut(){try{return!localStorage.getItem('shapka_tut')}catch(e){return true}}
-function reset(){replyBox=null;const tut=isTut();S={tut,un:tut?{}:{...ALL},forceThief:0,replied:0,rainAt:tut?[rnd(40,50),rnd(140,155),rnd(240,255)]:[],rain:0,lowAt:0,lowPool:[],time:0,health:100,sick:false,coldT:0,need:null,needAt:rnd(20,30),warm:100,food:70,spirit:55,pocket:0,hatMoney:0,bread:2,total:0,shared:0,hatOut:false,share:false,
+function reset(){replyBox=null;const tut=isTut();B=tut?BAL.T:BAL.N;let rn=0;try{rn=(JSON.parse(localStorage.getItem('shapka')||'')||{}).n||0}catch(e){}nightNo=rn+1;nightK=tut?1:Math.min(BAL.nightCap,1+BAL.nightStep*Math.max(0,nightNo-2));S={tut,un:tut?{}:{...ALL},forceThief:0,replied:0,rainAt:tut?[rnd(40,50),rnd(140,155),rnd(240,255)]:[],rain:0,lowAt:0,lowPool:[],time:0,health:100,sick:false,coldT:0,need:null,needAt:rnd(20,30),warm:B.warm0,food:B.food0,spirit:55,pocket:0,hatMoney:0,bread:B.bread,total:0,shared:0,hatOut:false,share:false,
   card:false,sign:false,blanket:false,pFed:0,pFriend:false,dog:null,dogFed:0,dogNext:rnd(22,32),
-  pigeons:[],flock:null,pigT:rnd(10,18),pedT:1,spine:0,spineAt:5,rubCd:0,wave:0,strikes:0,cop:null,copAt:[rnd(50,75),rnd(130,170),rnd(230,265)],
+  pigeons:[],flock:null,pigT:rnd(10,18),pedT:1,spine:0,spineAt:5,rubCd:0,wave:0,strikes:0,cop:null,copAt:[rnd(45,70),rnd(110,140),rnd(175,205),rnd(240,268)],
   snowAt:rnd(90,170),snow:0,thieves:0,debt:0,flags:{},evAt:[rnd(28,40),rnd(85,105),rnd(150,175),rnd(225,250)],
   evPool:EVENTS.slice().sort(()=>Math.random()-.5),warned:{}};
   wins[0].off=rnd(60,140);wins[1].off=rnd(150,260);logEl.textContent=''}
@@ -319,14 +326,14 @@ function feedDog(){if(!live||paused)return;const d=S.dog;if(!d||d.state!=='sit')
   if(S.dogFed===1){say('sys','Пёс глотает хлеб не жуя, обходит тебя кругом и ложится вплотную, боком к твоему боку.');say('cold','Вас двое. Это нечестно.')}
   else{const l=pick([['hunger','Минус корка. Зато бок тёплый. Ладно, считается.'],['mem','Вера всегда говорила: в доме должен кто-то дышать, кроме тебя.'],['asph','Он греет тебя, ты греешь меня. Цепочка.']]);say(l[0],l[1])}}
 $('#bEat').onclick=()=>{if(!live||paused||S.bread<1)return;S.bread--;S.food+=30;S.spirit+=2;S.drink=1.1;fl(46,72,'+сытость','good')};
-$('#bRub').onclick=()=>{if(!live||paused||S.rubCd>0||S.food<=3)return;S.warm+=7;S.food-=3;S.rubCd=4;S.hurt=.4;fl(56,72,'+тепло','good')};
+$('#bRub').onclick=()=>{if(!live||paused||S.rubCd>0||S.food<=BAL.rubFood)return;S.warm+=BAL.rubWarm;S.food-=BAL.rubFood;S.rubCd=BAL.rubCd;S.hurt=.4;fl(56,72,'+тепло','good')};
 function buy(price,fn,owned){return()=>{if(!live||paused||!shopOpen()||S.pocket<price||(owned&&S[owned]))return;S.pocket-=price;fn();fl(152,36,'−'+price+' ₽')}}
-$('#sBread').onclick=buy(25,()=>S.bread++);
-$('#sTea').onclick=buy(35,()=>{S.drink=1.1;S.warm+=32;S.health+=3;fl(46,72,'+тепло','good')});
-$('#sPill').onclick=buy(40,()=>{S.drink=1.1;const w=S.sick;S.sick=false;S.coldT=0;S.health+=15;fl(46,72,'+здоровье','good');if(w)say('cold','Аспирин. Ладно, из груди я выйду. Постою рядом.')});
-$('#sCard').onclick=buy(50,()=>{S.card=true;say('asph','Картон. Спасибо, что между нами теперь что-то есть.')},'card');
-$('#sSign').onclick=buy(70,()=>{S.sign=true;say('pride','«Наладчик лифтов. 31 год стажа». Ты написал резюме. На картонке.')},'sign');
-$('#sBlank').onclick=buy(120,()=>{S.blanket=true;say('cold','Одеяло. В клетку. Ну-ну. Я подожду.')},'blanket');
+$('#sBread').onclick=buy(BAL.price.bread,()=>S.bread++);
+$('#sTea').onclick=buy(BAL.price.tea,()=>{S.drink=1.1;S.warm+=BAL.teaWarm;S.health+=3;fl(46,72,'+тепло','good')});
+$('#sPill').onclick=buy(BAL.price.pill,()=>{S.drink=1.1;const w=S.sick;S.sick=false;S.coldT=0;S.health+=15;fl(46,72,'+здоровье','good');if(w)say('cold','Аспирин. Ладно, из груди я выйду. Постою рядом.')});
+$('#sCard').onclick=buy(BAL.price.card,()=>{S.card=true;say('asph','Картон. Спасибо, что между нами теперь что-то есть.')},'card');
+$('#sSign').onclick=buy(BAL.price.sign,()=>{S.sign=true;say('pride','«Наладчик лифтов. 31 год стажа». Ты написал резюме. На картонке.')},'sign');
+$('#sBlank').onclick=buy(BAL.price.blanket,()=>{S.blanket=true;say('cold','Одеяло. В клетку. Ну-ну. Я подожду.')},'blanket');
 cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();tap((e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H)});
 function targets(){const a=[];if(!live||paused)return a;
   const th=peds.find(p=>p.type==='thief'&&!p.spotted&&S.hatOut&&S.hatMoney>0&&Math.abs(p.x-HX)<75&&(HX-p.x)*p.dir>0);
@@ -357,7 +364,7 @@ function tap(x,y){if(!live||paused)return;
 const COATS=['#b55a4a','#4f7fa8','#c9a24a','#6f8f5c','#8a6fa8','#c7c2b8','#3f5870','#a8734f','#d98a9a'];
 function spawnPed(){const dir=Math.random()<.5?1:-1,night=live&&S.time>110&&S.time<230;
   if(live&&S.forceThief&&!(S.hatOut&&S.hatMoney>0))S.forceThief=Math.min(S.forceThief+1,4);
-  const thief=live&&S.un.thief&&((S.forceThief&&S.hatOut&&S.hatMoney>0)||(night&&S.thieves<(S.tut?1:3)&&Math.random()<.14));if(thief){S.thieves++;S.forceThief=0}
+  const thief=live&&S.un.thief&&((S.forceThief&&S.hatOut&&S.hatMoney>0)||(night&&S.thieves<B.thiefMax&&Math.random()<B.thiefP));if(thief){S.thieves++;S.forceThief=0}
   peds.push({x:dir>0?-8:W+2,y:rnd(104,110)|0,dir,sp:thief?30:rnd(14,24)*(live&&S.rain>0?1.4:1),ph:Math.random(),type:thief?'thief':'n',umb:live&&S.rain>0&&!thief?pick(['#c9483f','#2b2f3a','#3a5fd0','#e8cf6a','#4f8f6c','#8a6fa8']):null,
     hair:pick(['#2a2020','#5a3d28','#8a8a8a','#c9a15a','#3a2a22']),coat:thief?'#2a2c33':pick(COATS),leg:pick(['#2b2f3a','#3a3340','#4d5468']),skin:pick(['#e0b08c','#c98f6a','#f0c9a8']),
     cap:thief?'#2a2c33':(Math.random()<.6?pick(['#2b2f3a','#8a2f2f','#e8dcc0','#3f6b4f']):null),scarf:Math.random()<.4?pick(['#e8cf6a','#c9483f','#e8dcc0']):null,bag:Math.random()<.35,pause:0})}
@@ -367,7 +374,7 @@ function passHat(p){
       else{const l=S.hatMoney;S.hatMoney=0;p.sp=75;S.spirit-=6;fl(HX,HY-6,'−'+l+' ₽','bad');say('hat','Меня вытряхнули. Минус '+l+' ₽. Капюшон, кроссовки, бегает лучше тебя.')}}
     return}
   if(!S.hatOut)return;
-  let c=.2+(S.sign?.1:0)+(S.pFriend?.07:0)+(S.dog&&S.dog.state==='lie'?.06:0)+(S.snow>0?.06:0)-(S.rain>0?.05:0);
+  let c=B.give+(S.sign?.1:0)+(S.pFriend?.07:0)+(S.dog&&S.dog.state==='lie'?.06:0)+(S.snow>0?.06:0)-(S.rain>0?.05:0);
   if(S.hatMoney>0&&S.hatMoney<=60)c+=.06;if(S.hatMoney>90)c-=.12;
   if(Math.random()<c){const a=Math.random()<.03?100:pick([5,10,10,10,20,20,50]);p.pause=.6;
     parts.push({k:'c',x:p.x+3,y:p.y-12,sx:p.x+3,sy:p.y-12,t:0,a})}}
@@ -391,17 +398,17 @@ function step(dt){
   if(rainG)rainG.gain.value+=((S.rain>0?.09:0)-rainG.gain.value)*Math.min(1,dt*2);
   S.time+=dt;barkCd-=dt;S.rubCd-=dt;S.wave-=dt;S.drink-=dt;S.hurt-=dt;
   const tt=S.time/300;
-  let c=.32+.5*Math.pow(Math.sin(Math.PI*tt),1.5);if(S.tut)c*=.75;
+  let c=(B.cold0+B.cold1*Math.pow(Math.sin(Math.PI*tt),1.5))*nightK;
   c*=(S.card?.8:1)*(S.blanket?.65:1)*(S.dog&&S.dog.state==='lie'?.55:1)*(S.snow>0?1.3:1)*(S.rain>0?(S.tut?1.1:1.25):1)*(S.food<=0?(S.spirit>=60?1.1:1.8):1)*(S.spirit<25?1.15:1);
   if(S.debt>0){S.debt-=dt;c+=.35}
-  S.warm-=c*dt;if(S.un.food)S.food-=.2*dt;S.spirit-=(.07+(S.warm<25?.1:0)+(S.food<=0?.15:0))*dt;
-  if(S.warm<35)S.coldT+=dt;else S.coldT=Math.max(0,S.coldT-dt*2);
-  if(S.coldT>18&&!S.sick){S.sick=true;say('cold','Кашель. Это я обживаюсь у тебя в груди. Аспирин в ларьке, если он открыт.')}
+  S.warm-=c*dt;if(S.un.food)S.food-=B.food*dt;S.spirit-=(B.mood+(S.warm<25?.1:0)+(S.food<=0?.15:0))*dt;
+  if(S.warm<B.sickWarm)S.coldT+=dt;else S.coldT=Math.max(0,S.coldT-dt*2);
+  if(S.coldT>B.sickAfter&&!S.sick){S.sick=true;say('cold','Кашель. Это я обживаюсь у тебя в груди. Аспирин в ларьке, если он открыт.')}
   const opt=S.spirit>=60;
-  let hd=(S.sick?.3:0)+(S.warm<=0?3:S.warm<20?.5:0)+(S.food<=0&&!opt?1:0);
+  let hd=(S.sick?BAL.hpSick:0)+(S.warm<=0?BAL.hpFrozen:S.warm<30?BAL.hpCold:0)+(S.food<=0?(opt?BAL.hpStarveBrave:BAL.hpStarve):S.food<15?BAL.hpHungry:0);
   hd*=1.35-S.spirit/100*.9;
   if(opt&&S.food<=0&&!S.warned.opt){S.warned.opt=1;say('hunger','Я пуст. А ты улыбаешься. На чём ты едешь, Сомов?');say('pride','На упрямстве. Это тоже топливо. Пока не унываешь, голод тебя не возьмёт.')}
-  if(!hd&&S.warm>50&&S.food>40)hd=-.2;
+  if(!hd&&S.warm>60&&S.food>50)hd=-BAL.hpRegen;
   S.health-=hd*dt;if(S.sick)S.spirit-=.05*dt;
   if(!S.need&&S.time>S.needAt){S.need={k:Math.random()<.5?'h':'s',t:9};
     if(!S.warned.need){S.warned.need=1;say('sys','Над ним всплыл значок. Нажми на него самого. «!» значит затекло тело, «…» значит накатило.')}}
@@ -432,7 +439,7 @@ function step(dt){
     if(k.x<-80||k.x>W+50)S.cop=null}
   // pigeons
   S.pigT-=dt;
-  if(S.pigT<=0&&!S.pigeons.length){S.pigT=rnd(14,26);S.flock={t:0,fed:false};const n=1+(Math.random()*3|0);
+  if(S.pigT<=0&&!S.pigeons.length){S.pigT=rnd(B.pig[0],B.pig[1]);S.flock={t:0,fed:false};const n=1+(Math.random()*3|0);
     for(let i=0;i<n;i++){const tx=rnd(90,126),ty=rnd(90,101);S.pigeons.push({x:tx+rnd(-30,30),y:-6-i*8,tx,ty,state:'in',o:Math.random()*6,vx:0})}}
   if(S.pigeons.length){let all=true;
     for(let i=S.pigeons.length-1;i>=0;i--){const p=S.pigeons[i];
@@ -461,7 +468,7 @@ function step(dt){
     if(!U.need&&t>106){U.need=1;S.needAt=t+1}
     if(!U.cop&&t>122){U.cop=1;S.copAt=[t+7,rnd(215,250)];say('hat','Сейчас поедет патруль, я их чую. Увидишь синий свет — забери меня, иначе мелочь уедет с ними.')}
     if(!U.thief&&t>150){U.thief=1;S.forceThief=1;say('hat','Ночью ходят в капюшонах. Такой вытряхнет меня на бегу. Над ним будет красная стрелка — нажми на него.')}
-    for(const k of[['card',50],['sign',70],['blanket',120]])if(!U[k[0]]&&S.pocket>=k[1]){U[k[0]]=1;if(!U.extra){U.extra=1;say('asph','В ларьке есть вещи надолго: картон, табличка, одеяло. Они работают до утра.')}}
+    for(const k of[['card',BAL.price.card],['sign',BAL.price.sign],['blanket',BAL.price.blanket]])if(!U[k[0]]&&S.pocket>=k[1]){U[k[0]]=1;if(!U.extra){U.extra=1;say('asph','В ларьке есть вещи надолго: картон, табличка, одеяло. Они работают до утра.')}}
     if(!U.pill&&S.sick)U.pill=1}
   if(S.strikes>=3)end('cops');else if(S.health<=0)end(S.warm<=0?'cold':'ill');else if(S.spirit<=0)end('spirit');else if(S.time>=300)end('win');
 }
@@ -486,7 +493,7 @@ let helpMode=false;
 document.addEventListener('click',e=>{if(e.target.closest('button')){audio();SND.click()}},true);
 $('#bSnd').onclick=()=>{sndOn=!sndOn;audio();if(MG)MG.gain.value=sndOn?.6:0;$('#bSnd').textContent=sndOn?'Звук вкл':'Звук выкл'};
 $('#bHelp').onclick=()=>{if(!live||paused)return;helpMode=true;paused=true;$('#vTitle').textContent='Как играть';$('#vText').textContent='';$('#vHints').hidden=false;$('#vStat').textContent='';$('#vGo').textContent='Продолжить';$('#veil').hidden=false};
-$('#vGo').onclick=()=>{if(helpMode){helpMode=false;paused=false;$('#veil').hidden=true;return}reset();peds.length=0;parts.length=0;live=true;paused=false;$('#veil').hidden=true;say('sys',S.tut?'19:00. Фонарь над тобой щёлкает и загорается. Моросит.':'19:00. Фонарь над тобой щёлкает и загорается. К ночи обещали снег.');
+$('#vGo').onclick=()=>{if(helpMode){helpMode=false;paused=false;$('#veil').hidden=true;return}reset();peds.length=0;parts.length=0;live=true;paused=false;$('#veil').hidden=true;say('sys',S.tut?'19:00. Фонарь над тобой щёлкает и загорается. Моросит.':'Ночь '+nightNo+'. 19:00. Фонарь над тобой щёлкает и загорается. К ночи обещали снег'+(nightK>1?', и холоднее, чем вчера.':'.'));
   if(S.tut){S.pigT=1e9;S.needAt=1e9;S.dogNext=1e9;S.copAt=[];S.snowAt=1e9;S.evAt=[rnd(96,104),rnd(165,178),rnd(228,245)];say('hat','Я ондатровая шапка. Вера выбирала. Выставь меня — кнопка внизу. Прохожие будут кидать мелочь.')}
   else{S.snowAt=rnd(45,80)}};
 
@@ -602,11 +609,12 @@ function hud(){const cp=Math.min(100,S.time/3)+'%';if(cache.car!==cp){cache.car=
   const off=!live||paused,so=shopOpen();
   setBtn('#bHat',S.hatOut?'Забрать шапку<small>'+(S.hatMoney?'+'+S.hatMoney+' ₽ в карман':'спрятать от патруля и воров')+'</small>':'Выставить шапку<small>прохожие кидают мелочь</small>',off,S.hatOut);
   const dg=S.dog,ds=dg&&dg.state;setBtn('#bDog','Покормить пса<small>'+(ds==='lie'?'пёс греет тебя':ds==='sit'?(S.bread<1?'нужен хлеб':'−1 хлеб, +тепло, +настроение'):dg?'пёс занят':'пса рядом нет')+'</small>',off||ds!=='sit'||S.bread<1,ds==='lie');
-  setBtn('#bEat','Съесть хлеб<small>+30 сытости</small>',off||S.bread<1);setBtn('#bRub','Растереть руки<small>+7 тепла, −3 сытости</small>',off||S.rubCd>0||S.food<=3);
+  setBtn('#bEat','Съесть хлеб<small>+30 сытости</small>',off||S.bread<1);setBtn('#bRub','Растереть руки<small>+'+BAL.rubWarm+' тепла, −'+BAL.rubFood+' сытости</small>',off||S.rubCd>0||S.food<=BAL.rubFood);
   const sb=(id,n,p,ds,own)=>setBtn(id,n+' '+(own?'есть':p+' ₽')+'<small>'+ds+'</small>',off||!so||own||S.pocket<p);
-  sb('#sBread','Хлеб',25,'еда себе или псу');sb('#sTea','Чай',35,'+32 тепла');sb('#sPill','Аспирин',40,'лечит кашель');sb('#sCard','Картон',50,'мёрзнешь меньше',S.card);sb('#sSign','Табличка',70,'подают чаще',S.sign);sb('#sBlank','Одеяло',120,'мёрзнешь намного меньше',S.blanket);
+  const P=BAL.price;sb('#sBread','Хлеб',P.bread,'еда себе или псу');sb('#sTea','Чай',P.tea,'+'+BAL.teaWarm+' тепла');sb('#sPill','Аспирин',P.pill,'лечит кашель');sb('#sCard','Картон',P.card,'мёрзнешь меньше',S.card);sb('#sSign','Табличка',P.sign,'подают чаще',S.sign);sb('#sBlank','Одеяло',P.blanket,'мёрзнешь намного меньше',S.blanket);
   set('#shopnote',so?(hour()>=19?'Ларёк работает до полуночи':'Ларёк открыт'):'Ларёк закрыт до 04:00')}
 function frame(now){const dt=Math.min(.05,(now-last)/1000||0);last=now;if(!paused){anim+=dt;step(dt)}draw();marks();hud();requestAnimationFrame(frame)}
+window.__g={get S(){return S},get live(){return live},get paused(){return paused},step,hud,tap,targets,BAL,set k(v){nightK=v}};
 reset();S.time=0;if(S.tut){$('#vHints').hidden=true;$('#vText').textContent+=' Первая ночь дождливая и мягкая. Выставь шапку, остальное расскажут по ходу.'}requestAnimationFrame(frame);
 })();
 </script>
